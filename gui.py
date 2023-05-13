@@ -4,20 +4,28 @@ from tkinter import *
 from PIL import ImageTk, Image
 import pandas as pd
 import numpy as np
+import cv2
 
-model = load_model("traffic_classifier.h5")
+model = load_model("traffic_classifier_MyModel.h5")
 
 df = pd.read_csv("data/Meta.csv")
 classes = df["ClassLabel"]
 
 
+def preprocess(img):
+    img = cv2.normalize(img, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8U)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img = cv2.equalizeHist(img)
+    img = img / 255
+    return img
+
+
 def classify(file_path):
-    img = Image.open(file_path).resize((30, 30))
-    img = np.expand_dims(img, axis=0)
-    img = np.array(img)
-    predicted_class = np.argmax(model.predict([img]), axis=1)[0]
+    img = preprocess(np.array(Image.open(file_path).resize((30, 30))))
+    y_pred = model.predict(img.reshape(1, 30, 30, 1))
+    predicted_class = np.argmax(y_pred)
     sign_text = classes[predicted_class]
-    label.configure(text=sign_text)
+    label.configure(text=f"[{predicted_class}] {sign_text}")
 
 
 def enable_classify_button(file_path):
